@@ -449,6 +449,50 @@ QBCore.Commands.Add('givecash', Lang:t('command.givecash'), {{name = 'id', help 
 	end
 end)
 
+QBCore.Commands.Add('givedirty', Lang:t('command.givedirty'), {{name = 'id', help = 'Player ID'}, {name = 'amount', help = 'Amount'}}, true, function(source, args)
+    local src = source
+      local id = tonumber(args[1])
+      local amount = math.ceil(tonumber(args[2]))
+  
+      if id and amount then
+          local xPlayer = QBCore.Functions.GetPlayer(src)
+          local xReciv = QBCore.Functions.GetPlayer(id)
+  
+          if xReciv and xPlayer then
+              if not xPlayer.PlayerData.metadata["isdead"] then
+                  local distance = xPlayer.PlayerData.metadata["inlaststand"] and 3.0 or 10.0
+                  if #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(GetPlayerPed(id))) < distance then
+                      if amount > 0 then
+                          if xPlayer.Functions.RemoveMoney('dirty', amount) then
+                              if xReciv.Functions.AddMoney('dirty', amount) then
+                                  TriggerClientEvent('QBCore:Notify', src, Lang:t('success.give_cash',{id = tostring(id), cash = tostring(amount)}), "success")
+                                  TriggerClientEvent('QBCore:Notify', id, Lang:t('success.received_cash',{id = tostring(src), cash = tostring(amount)}), "success")
+                                  TriggerClientEvent("payanimation", src)
+                              else
+                                  -- Return player cash
+                                  xPlayer.Functions.AddMoney('dirty', amount)
+                                  TriggerClientEvent('QBCore:Notify', src, Lang:t('error.not_give'), "error")
+                              end
+                          else
+                              TriggerClientEvent('QBCore:Notify', src, Lang:t('error.not_enough'), "error")
+                          end
+                      else
+                          TriggerClientEvent('QBCore:Notify', src, Lang:t('error.invalid_amount'), "error")
+                      end
+                  else
+                      TriggerClientEvent('QBCore:Notify', src, Lang:t('error.too_far_away'), "error")
+                  end
+              else
+                  TriggerClientEvent('QBCore:Notify', src, Lang:t('error.dead'), "error")
+              end
+          else
+              TriggerClientEvent('QBCore:Notify', src, Lang:t('error.wrong_id'), "error")
+          end
+      else
+          TriggerClientEvent('QBCore:Notify', src, Lang:t('error.givecash'), "error")
+      end
+  end)
+
 RegisterNetEvent("payanimation", function()
     TriggerEvent('animations:client:EmoteCommandStart', {"id"})
 end)
